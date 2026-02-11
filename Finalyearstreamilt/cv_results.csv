@@ -1,9 +1,0 @@
-Model,CV_MacroF1,Best_Params
-SVM_RBF,0.43208926904392353,"{'clf__gamma': 0.05, 'clf__class_weight': 'balanced', 'clf__C': 0.5}"
-CatBoost,0.4262493846037637,"{'random_strength': 1.0, 'learning_rate': 0.03, 'l2_leaf_reg': 3, 'iterations': 1000, 'depth': 4, 'class_weights': {2: 0.73, 1: 1.38, 0: 1.11}, 'bagging_temperature': 0.5}"
-GradientBoosting,0.40014805358862776,"{'subsample': 0.85, 'n_estimators': 500, 'max_depth': 3, 'learning_rate': 0.08}"
-KNN,0.39685838780384436,"{'clf__weights': 'uniform', 'clf__p': 1, 'clf__n_neighbors': 15}"
-XGBoost,0.39401432986119683,"{'subsample': 0.95, 'reg_lambda': 1.0, 'reg_alpha': 0.5, 'n_estimators': 1000, 'max_depth': 5, 'learning_rate': 0.05, 'colsample_bytree': 0.95}"
-RandomForest,0.3797303816822935,"{'n_estimators': 500, 'min_samples_split': 5, 'min_samples_leaf': 1, 'max_features': 'log2', 'max_depth': None}"
-DecisionTree,0.3777000030472001,"{'min_samples_split': 10, 'min_samples_leaf': 4, 'max_depth': 8, 'criterion': 'gini'}"
-NeuralNetwork_MLP,0.3639962299415394,"{'clf__learning_rate_init': 0.001, 'clf__hidden_layer_sizes': (128, 64, 32), 'clf__alpha': 0.0001}"
