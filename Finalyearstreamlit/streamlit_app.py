@@ -7,26 +7,28 @@ from pathlib import Path
 
 st.set_page_config(page_title="EPL Outcome Prediction Dashboard", layout="wide")
 
-CV_CSV = "cv_results.csv"
-TEST_CSV = "test_results.csv"
-BAL_CSV = "class_balance.csv"
+BASE_DIR = Path(__file__).resolve().parent
 
-MODEL_FILE = "best_model.joblib"
-DATA_FILE = "data_clean.csv"
+CV_CSV = BASE_DIR / "cv_results.csv"
+TEST_CSV = BASE_DIR / "test_results.csv"
+BAL_CSV = BASE_DIR / "class_balance.csv"
+
+MODEL_FILE = BASE_DIR / "best_model.joblib"
+DATA_FILE = BASE_DIR / "data_clean.csv"
 
 LABEL_TO_TEXT = {2: "Home Win", 1: "Draw", 0: "Away Win"}
 TEXT_TO_LABEL = {"Home Win": 2, "Draw": 1, "Away Win": 0}
 
 @st.cache_data
-def load_csv(path: str) -> pd.DataFrame:
+def load_csv(path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 @st.cache_resource
-def load_model(path: str):
+def load_model(path):
     return joblib.load(path)
 
 @st.cache_data
-def load_history(path: str) -> pd.DataFrame:
+def load_history(path) -> pd.DataFrame:
     df = pd.read_csv(path)
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date").reset_index(drop=True)
@@ -134,7 +136,7 @@ if page == "Overview":
         """
     )
 
-    if Path(BAL_CSV).exists():
+    if BAL_CSV.exists():
         bal = load_csv(BAL_CSV)
         st.subheader("Class Balance")
         if "Count" in bal.columns and ("FTR" in bal.columns or "FTR_Label" in bal.columns):
@@ -151,7 +153,7 @@ elif page == "Model Performance":
 
     with col1:
         st.subheader("Cross-Validation (Macro F1)")
-        if Path(CV_CSV).exists():
+        if CV_CSV.exists():
             cv_df = load_csv(CV_CSV).sort_values("CV_MacroF1", ascending=False)
             fig = px.bar(cv_df, x="Model", y="CV_MacroF1", title="Cross-Validation Macro F1 by Model")
             st.plotly_chart(fig, use_container_width=True)
@@ -161,7 +163,7 @@ elif page == "Model Performance":
 
     with col2:
         st.subheader("Hold-out Test (Macro F1)")
-        if Path(TEST_CSV).exists():
+        if TEST_CSV.exists():
             test_df = load_csv(TEST_CSV).sort_values("Test_MacroF1", ascending=False)
             fig = px.bar(test_df, x="Model", y="Test_MacroF1", title="Test Macro F1 by Model")
             st.plotly_chart(fig, use_container_width=True)
@@ -173,18 +175,19 @@ elif page == "Model Performance":
     st.subheader("Add your other figures")
 
     for img in ["figure_class_balance.png", "figure_forecasting_timeline.png", "figure_pipeline_clean_correct.png"]:
-        if Path(img).exists():
-            st.image(img, caption=img, use_container_width=True)
+        img_path = BASE_DIR / img
+        if img_path.exists():
+            st.image(str(img_path), caption=img, use_container_width=True)
 
 elif page == "Predict a Match":
     st.subheader("Predict an Upcoming Fixture")
 
-    if not Path(MODEL_FILE).exists():
-        st.error(f"Model file not found: {MODEL_FILE}. Save your best trained model as 'best_model.joblib' first.")
+    if not MODEL_FILE.exists():
+        st.error(f"Model file not found: {MODEL_FILE.name}. Upload it next to your Streamlit app.")
         st.stop()
 
-    if not Path(DATA_FILE).exists():
-        st.error(f"Historical data file not found: {DATA_FILE}. Save your cleaned dataset as 'data_clean.csv' first.")
+    if not DATA_FILE.exists():
+        st.error(f"Historical data file not found: {DATA_FILE.name}. Upload it next to your Streamlit app.")
         st.stop()
 
     model = load_model(MODEL_FILE)
