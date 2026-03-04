@@ -7,27 +7,33 @@ from pathlib import Path
 
 st.set_page_config(page_title="EPL Outcome Prediction Dashboard", layout="wide")
 
-CV_CSV = "cv_results.csv"
-TEST_CSV = "test_results.csv"
-BAL_CSV = "class_balance.csv"
+BASE_DIR = Path(__file__).resolve().parent
 
-MODEL_FILE = "best_model.joblib"
-DATA_FILE = "data_clean.csv"
+CV_CSV = BASE_DIR / "cv_results.csv"
+TEST_CSV = BASE_DIR / "test_results.csv"
+BAL_CSV = BASE_DIR / "class_balance.csv"
+
+MODEL_FILE = BASE_DIR / "best_model.joblib"
+DATA_FILE = BASE_DIR / "data_clean.csv"
 
 LABEL_TO_TEXT = {2: "Home Win", 1: "Draw", 0: "Away Win"}
 TEXT_TO_LABEL = {"Home Win": 2, "Draw": 1, "Away Win": 0}
 
 @st.cache_data
-def load_csv(path: str) -> pd.DataFrame:
+def load_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 @st.cache_resource
-def load_model(path: str):
+def load_model(path: Path):
     return joblib.load(path)
 
 @st.cache_data
-def load_history(path: str) -> pd.DataFrame:
+def load_history(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
+
+    if "Unnamed: 0" in df.columns:
+        df = df.drop(columns=["Unnamed: 0"])
+
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date").reset_index(drop=True)
     return df
@@ -134,7 +140,8 @@ if page == "Overview":
         """
     )
 
-    if Path(BAL_CSV).exists():
+    # changed: BAL_CSV is already a Path
+    if BAL_CSV.exists():
         bal = load_csv(BAL_CSV)
         st.subheader("Class Balance")
         if "Count" in bal.columns and ("FTR" in bal.columns or "FTR_Label" in bal.columns):
@@ -144,47 +151,49 @@ if page == "Overview":
         else:
             st.dataframe(bal, use_container_width=True)
     else:
-        st.info("class_balance.csv not found yet. Export it from your notebook to show class balance here.")
+        st.info("class_balance.csv not found yet.")
 
 elif page == "Model Performance":
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Cross-Validation (Macro F1)")
-        if Path(CV_CSV).exists():
+        if CV_CSV.exists():
             cv_df = load_csv(CV_CSV).sort_values("CV_MacroF1", ascending=False)
             fig = px.bar(cv_df, x="Model", y="CV_MacroF1", title="Cross-Validation Macro F1 by Model")
             st.plotly_chart(fig, use_container_width=True)
             st.dataframe(cv_df, use_container_width=True)
         else:
-            st.info("cv_results.csv not found yet. Save your CV summary to CSV to display it here.")
+            st.info("cv_results.csv not found yet.")
 
     with col2:
         st.subheader("Hold-out Test (Macro F1)")
-        if Path(TEST_CSV).exists():
+        if TEST_CSV.exists():
             test_df = load_csv(TEST_CSV).sort_values("Test_MacroF1", ascending=False)
             fig = px.bar(test_df, x="Model", y="Test_MacroF1", title="Test Macro F1 by Model")
             st.plotly_chart(fig, use_container_width=True)
             st.dataframe(test_df, use_container_width=True)
         else:
-            st.info("test_results.csv not found yet. Save your test summary to CSV to display it here.")
+            st.info("test_results.csv not found yet.")
 
     st.divider()
     st.subheader("Add your other figures")
 
+    # changed: images resolved from BASE_DIR too
     for img in ["figure_class_balance.png", "figure_forecasting_timeline.png", "figure_pipeline_clean_correct.png"]:
-        if Path(img).exists():
-            st.image(img, caption=img, use_container_width=True)
+        img_path = BASE_DIR / img
+        if img_path.exists():
+            st.image(str(img_path), caption=img, use_container_width=True)
 
 elif page == "Predict a Match":
     st.subheader("Predict an Upcoming Fixture")
 
-    if not Path(MODEL_FILE).exists():
-        st.error(f"Model file not found: {MODEL_FILE}. Save your best trained model as 'best_model.joblib' first.")
+    if not MODEL_FILE.exists():
+        st.error("Model file not found: best_model.joblib")
         st.stop()
 
-    if not Path(DATA_FILE).exists():
-        st.error(f"Historical data file not found: {DATA_FILE}. Save your cleaned dataset as 'data_clean.csv' first.")
+    if not DATA_FILE.exists():
+        st.error("Historical data file not found: data_clean.csv")
         st.stop()
 
     model = load_model(MODEL_FILE)
@@ -209,14 +218,13 @@ elif page == "Predict a Match":
         st.stop()
 
     asof_date = pd.to_datetime(asof_date)
-
     st.caption("Features are computed from the previous 5 matches for each team (strictly before the selected date).")
 
     if st.button("Predict outcome"):
         X_pred = build_features_for_fixture(history, home_team, away_team, asof_date)
 
         if X_pred is None:
-            st.error("Not enough historical matches (need at least 5 prior matches for both teams with required stats). Try an earlier date or different teams.")
+            st.error("Not enough historical matches (need at least 5 prior matches for both teams with required stats).")
             st.stop()
 
         feature_cols = [
